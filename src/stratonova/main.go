@@ -36,8 +36,8 @@ type Lap struct {
 }
 
 func main() {
-	printAuthInstructions()
 	// Define your handlers for different endpoints
+	http.HandleFunc("/", mainPageHandler)
 	http.HandleFunc("/exchange_token", exchangeTokenHandler)
 	http.HandleFunc("/update-activity", updateActivityHandler)
 
@@ -48,15 +48,13 @@ func main() {
 	}
 }
 
-func printAuthInstructions() {
+func mainPageHandler(w http.ResponseWriter, r *http.Request) {
 	stravaClientID := os.Getenv("STRAVA_CLIENT_ID")
 	// Step 1: Redirect the user to the Strava authorization page
 	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force&redirect_uri=%s/exchange_token", stravaClientID, redirectURI)
-
-	fmt.Println("In case you do not have an access token, please visit the following URL to authorize the application:")
-	fmt.Println(authURL)
+	fmt.Fprintf(w, "In case you do not have an access token, please visit the following URL to authorize the application:", authURL)
 	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
-	fmt.Println("http://localhost:8080/update-activity?accessToken={AT}")
+	fmt.Println("https://stratonova-l5snujqyaq-ew.a.run.app/update-activity?accessToken={AT}")
 }
 
 func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +68,7 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Failed to exchange authorization code for access token:", err)
 		return
 	}
-	fmt.Println("Successfully got an accessToken 🎉", accessToken)
+	fmt.Fprintf(w, "Successfully got an accessToken 🎉%s", accessToken)
 }
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
