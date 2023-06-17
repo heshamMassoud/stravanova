@@ -52,9 +52,8 @@ func mainPageHandler(w http.ResponseWriter, r *http.Request) {
 	stravaClientID := os.Getenv("STRAVA_CLIENT_ID")
 	// Step 1: Redirect the user to the Strava authorization page
 	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force&redirect_uri=%s/exchange_token", stravaClientID, redirectURI)
-	fmt.Fprintf(w, "In case you do not have an access token, please visit the following URL to authorize the application:", authURL)
-	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
-	fmt.Println("https://stratonova-l5snujqyaq-ew.a.run.app/update-activity?accessToken={AT}")
+	fmt.Fprintf(w, "In case you do not have an access token, please visit the following URL to authorize the application: %s", authURL)
+	fmt.Fprintf(w, "otherwise, you can already start using the app by visiting the following URL: %s", "https://stratonova-l5snujqyaq-ew.a.run.app/update-activity?access_token={access token}")
 }
 
 func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +71,7 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
-	accessToken := r.URL.Query().Get("accessToken")
+	accessToken := r.URL.Query().Get("access_token")
 
 	workoutID := 9173573412 // Replace with the ID of the workout you want to fetch
 	workout, err := fetchWorkoutDetails(workoutID, accessToken)
