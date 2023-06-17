@@ -52,7 +52,7 @@ env:
   PROJECT_ID: stratonova
   GAR_LOCATION: stratonova
   SERVICE: stratonova
-  REGION: YOUR_SERVICE_REGION # TODO: update Cloud Run service region
+  REGION: europe-west1
 
 jobs:
   deploy:
