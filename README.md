@@ -5,5 +5,5 @@ stravanova is your running buddy. It will summarise your workout exactly the mom
 
 ### Run locally
 ````bash
- go run src/stravanova/main.go
+ go run src/stramanova/main.go
 ````
