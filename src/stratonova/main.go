@@ -7,12 +7,11 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"net/url"
 	"os"
 )
 
 const (
-	redirectURI = "stratonova-l5snujqyaq-ew.a.run.app"
+	redirectURI = "https://stratonova-l5snujqyaq-ew.a.run.app"
 )
 
 type AccessTokenResponse struct {
@@ -52,7 +51,8 @@ func main() {
 func printAuthInstructions() {
 	stravaClientID := os.Getenv("STRAVA_CLIENT_ID")
 	// Step 1: Redirect the user to the Strava authorization page
-	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", stravaClientID, url.QueryEscape(redirectURI))
+	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force&redirect_uri=%s/exchange_token", stravaClientID, redirectURI)
+
 	fmt.Println("In case you do not have an access token, please visit the following URL to authorize the application:")
 	fmt.Println(authURL)
 	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
