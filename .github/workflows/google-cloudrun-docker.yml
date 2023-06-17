@@ -50,7 +50,7 @@ on:
 
 env:
   PROJECT_ID: stratonova
-  GAR_LOCATION: stratonova
+  GAR_LOCATION: europe-west3-docker.pkg.dev/stratonova/stratonova
   SERVICE: stratonova
   REGION: europe-west1
 
