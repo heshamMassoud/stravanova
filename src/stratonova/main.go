@@ -39,22 +39,31 @@ type Lap struct {
 }
 
 func main() {
-	// Step 1: Redirect the user to the Strava authorization page
-	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", clientID, url.QueryEscape(redirectURI))
+	printAuthInstructions()
+	// Define your handlers for different endpoints
+	http.HandleFunc("/redirect", redirectHandler)
+	http.HandleFunc("/update-activity", updateActivityHandler)
 
-	fmt.Println("Please visit the following URL to authorize the application:")
-	fmt.Println(authURL)
-
-	// Step 2: After the user authorizes the application, they will be redirected to your redirect URI
-	// You need to capture the authorization code from the query parameters of the redirected URL
-	http.HandleFunc("/", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Start the HTTP server
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func printAuthInstructions() {
+	// Step 1: Redirect the user to the Strava authorization page
+	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", clientID, url.QueryEscape(redirectURI))
+	fmt.Println("In case you do not have an access token, please visit the following URL to authorize the application:")
+	fmt.Println(authURL)
+	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
+	fmt.Println("http://localhost:8080/update-activity?accessToken={AT}")
+}
+
+func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	// Example of capturing the authorization code from a simulated redirect URI
 	authorizationCode := r.URL.Query().Get("code")
-	fmt.Println("Successfully got an auth code 🎉", authorizationCode)
+	fmt.Println("Successfully got the auth code 🎉", authorizationCode)
 
 	// Step 3: Exchange the authorization code for an access token
 	accessToken, err := exchangeCodeForToken(authorizationCode)
@@ -63,8 +72,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("Successfully got an accessToken 🎉", accessToken)
+}
 
-	// Step 4: Use the access token to make API requests
+func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
+	accessToken := r.URL.Query().Get("accessToken")
+
 	workoutID := 9173573412 // Replace with the ID of the workout you want to fetch
 	workout, err := fetchWorkoutDetails(workoutID, accessToken)
 	if err != nil {
