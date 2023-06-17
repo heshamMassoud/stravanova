@@ -1,4 +1,4 @@
-# Stratonova
+# Stratonova™
 Stratonova™ is your running buddy. Stratonova™ is a [Strava](strava.com) add-on application. [Strava](strava.com) summarises your run right after you finish it. No need for input from you. Just finish your run and enjoy a witty storytelling summary automatically posted on your strava activity.
 
 Stratonova™ will also name your run according to the type of run it was from each of the following:
