@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	redirectURI = "http://localhost:8080/"
+	redirectURI = "https://stratonova-l5snujqyaq-ew.a.run.app/redirect"
 )
 
 type AccessTokenResponse struct {
