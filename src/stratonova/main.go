@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	redirectURI = "https://stratonova-l5snujqyaq-ew.a.run.app"
+	redirectURI = "https://stratonova-l5snujqyaq-ew.a.run.app/exchange_token"
 )
 
 type AccessTokenResponse struct {
@@ -39,7 +39,7 @@ type Lap struct {
 func main() {
 	printAuthInstructions()
 	// Define your handlers for different endpoints
-	http.HandleFunc("/redirect", redirectHandler)
+	http.HandleFunc("/exchange_token", exchangeTokenHandler)
 	http.HandleFunc("/update-activity", updateActivityHandler)
 
 	// Start the HTTP server
@@ -52,14 +52,14 @@ func main() {
 func printAuthInstructions() {
 	stravaClientID := os.Getenv("STRAVA_CLIENT_ID")
 	// Step 1: Redirect the user to the Strava authorization page
-	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", stravaClientID, url.QueryEscape(redirectURI))
+	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", stravaClientID, url.QueryEscape(redirectURI))
 	fmt.Println("In case you do not have an access token, please visit the following URL to authorize the application:")
 	fmt.Println(authURL)
 	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
 	fmt.Println("http://localhost:8080/update-activity?accessToken={AT}")
 }
 
-func redirectHandler(w http.ResponseWriter, r *http.Request) {
+func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 	// Example of capturing the authorization code from a simulated redirect URI
 	authorizationCode := r.URL.Query().Get("code")
 	fmt.Println("Successfully got the auth code 🎉", authorizationCode)
