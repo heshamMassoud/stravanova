@@ -5,5 +5,11 @@ Stratonova™ is your running buddy. It will summarise your workout exactly the 
 
 ### Run locally
 ````bash
- go run src/stratonova/main.go
+cd stratonova/src
+go run main.go
+````
+
+### Debug
+````bash
+dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient
 ````

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 )
@@ -21,11 +22,20 @@ type AccessTokenResponse struct {
 }
 
 type Workout struct {
-	ID                 int     `json:"id"`
-	Name               string  `json:"name"`
-	Distance           float64 `json:"distance"`
-	TotalElevationGain float64 `json:"total_elevation_gain"`
-	Duration           int     `json:"moving_time"`
+	ID                 int       `json:"id"`
+	Name               string    `json:"name"`
+	Distance           float64   `json:"distance"`
+	TotalElevationGain float64   `json:"total_elevation_gain"`
+	Duration           int       `json:"moving_time"`
+	Laps               []Lap     `json:"laps"`
+	StartLocation      []float64 `json:"start_latlng"`
+}
+
+type Lap struct {
+	MaxSpeed         float64 `json:"max_speed"`
+	AverageSpeed     float64 `json:"average_speed"`
+	AverageCadence   float64 `json:"average_cadence"`
+	AverageHeartRate float64 `json:"average_heartrate"`
 }
 
 func main() {
@@ -55,7 +65,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Successfully got an accessToken 🎉", accessToken)
 
 	// Step 4: Use the access token to make API requests
-	workoutID := 9263490351 // Replace with the ID of the workout you want to fetch
+	workoutID := 9173573412 // Replace with the ID of the workout you want to fetch
 	workout, err := fetchWorkoutDetails(workoutID, accessToken)
 	if err != nil {
 		fmt.Println("Failed to fetch workout details", err)
@@ -72,12 +82,59 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Updating workout description..")
 
-	err = updateWorkoutDescription(workoutID, generateDescriptionFromOpenAI(), accessToken)
+	err = updateWorkout(workoutID, generateDescriptionFromOpenAI(), generateActivityName(workout), accessToken)
 	if err != nil {
 		fmt.Println("Failed to update workout description:", err)
 		return
 	}
 	fmt.Println("Workout description updated successfully!")
+}
+
+func generateActivityName(workout Workout) string {
+	const EasyRunThreshold = 8000
+	if workout.Distance < EasyRunThreshold {
+		return "Short but Sweet 💁🏽‍♂️"
+	}
+
+	const LongRunThreshold = 15000
+	if workout.Distance > LongRunThreshold {
+		return "Long Run ☄️"
+	}
+
+	// Get 2 laps from mid run and compare the pace, if its more than 2 mins, its def interval.
+	totalLaps := len(workout.Laps)
+	totalKms := convertMetersToKilometers(workout.Distance)
+
+	if hasMoreLapsThanKms(totalLaps, totalKms) {
+		// its either interval or threshold or progressive
+		if isIntervalTraining(workout) {
+			return "Interval training 💪🛤️"
+		}
+		return "Threshold Training 🚀🚀🚀"
+	}
+
+	return "Easy Flow 🌊🌊"
+}
+
+func hasMoreLapsThanKms(totalLaps int, totalKms float64) bool {
+	return totalLaps > int(totalKms)
+}
+
+func isIntervalTraining(workout Workout) bool {
+	totalLaps := len(workout.Laps)
+	midLap := totalLaps / 2
+	midLap1 := workout.Laps[midLap]
+	midLap2 := workout.Laps[midLap+1]
+	return isSpeedJump(midLap1, midLap2)
+}
+
+func isSpeedJump(lap1 Lap, lap2 Lap) bool {
+	return math.Abs(lap1.AverageSpeed-lap2.AverageSpeed) > 2
+}
+
+func convertMetersToKilometers(meters float64) float64 {
+	kilometers := math.Ceil(meters / 1000)
+	return kilometers
 }
 
 func prettyPrintJSON(jsonStr string) {
@@ -188,7 +245,7 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 	return workout, nil
 }
 
-func updateWorkoutDescription(workoutID int, newDescription string, accessToken string) error {
+func updateWorkout(workoutID int, newDescription string, newName string, accessToken string) error {
 	// Create a new HTTP client
 	client := http.Client{}
 
@@ -204,7 +261,8 @@ func updateWorkoutDescription(workoutID int, newDescription string, accessToken 
 	// Set the new description in the request body
 	req.Header.Set("Content-Type", "application/json")
 	payload := map[string]interface{}{
-		"description": newDescription,
+		//"description": newDescription,
+		"name": newName,
 	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
