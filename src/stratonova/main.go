@@ -8,12 +8,11 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 const (
-	clientID     = "xx"
-	clientSecret = "xx"
-	redirectURI  = "http://localhost:8080/"
+	redirectURI = "http://localhost:8080/"
 )
 
 type AccessTokenResponse struct {
@@ -51,8 +50,9 @@ func main() {
 }
 
 func printAuthInstructions() {
+	stravaClientID := os.Getenv("STRAVA_CLIENT_ID")
 	// Step 1: Redirect the user to the Strava authorization page
-	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", clientID, url.QueryEscape(redirectURI))
+	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", stravaClientID, url.QueryEscape(redirectURI))
 	fmt.Println("In case you do not have an access token, please visit the following URL to authorize the application:")
 	fmt.Println(authURL)
 	fmt.Println("otherwise, you can already start using the app by visiting the following URL: ")
@@ -177,8 +177,8 @@ func exchangeCodeForToken(code string) (string, error) {
 
 	// Set the request parameters
 	params := req.URL.Query()
-	params.Add("client_id", clientID)
-	params.Add("client_secret", clientSecret)
+	params.Add("client_id", os.Getenv("STRAVA_CLIENT_ID"))
+	params.Add("client_secret", os.Getenv("STRAVA_CLIENT_SECRET"))
 	params.Add("code", code)
 	params.Add("grant_type", "authorization_code")
 	req.URL.RawQuery = params.Encode()

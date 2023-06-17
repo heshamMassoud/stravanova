@@ -62,6 +62,9 @@ jobs:
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v0
         with:
+          env_vars: |
+            STRAVA_CLIENT_ID= '${{ secrets.STRAVA_CLIENT_ID }}'
+            STRAVA_CLIENT_SECRET= '${{ secrets.STRAVA_CLIENT_SECRET }}'
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           # NOTE: If using a pre-built image, update the image name here
