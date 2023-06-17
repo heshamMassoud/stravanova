@@ -31,7 +31,7 @@ type Workout struct {
 func main() {
 	// Step 1: Redirect the user to the Strava authorization page
 	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&redirect_uri=%s/exchange_token&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force", clientID, url.QueryEscape(redirectURI))
-	
+
 	fmt.Println("Please visit the following URL to authorize the application:")
 	fmt.Println(authURL)
 
@@ -235,7 +235,7 @@ Your recent adventure was a rollercoaster of effort and triumph. You pushed your
 
 It was an epic adventure, filled with sweat, determination, and a side of humor. Keep running and conquering those miles!
 
-Your friendly neighbourhood - Stratonova ✌️🏴
+Your friendly neighbourhood - Stratonova™️ ✌️🏴
 `
 }
 
