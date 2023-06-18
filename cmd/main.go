@@ -392,7 +392,10 @@ func generateSummary(prompt string) (string, error) {
 	}
 
 	if len(openAIResp.Choices) > 0 {
-		return openAIResp.Choices[0].Message.Content, nil
+		return openAIResp.Choices[0].Message.Content +
+			`	
+			Your friendly neighbourhood - Stratonova ✌️🏴‍☠️
+			`, nil
 	}
 
 	return "", fmt.Errorf("No response received from ChatGPT")
@@ -592,7 +595,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Printf("Summary from chatgpt: %s\n", summary)
 
-			err = updateWorkout(workoutID, summary, generateActivityName(workout), accessToken)
+			err = updateWorkout(event.ObjectId, summary, generateActivityName(workout), accessToken)
 			if err != nil {
 				fmt.Println("Failed to update workout description:", err)
 				return
