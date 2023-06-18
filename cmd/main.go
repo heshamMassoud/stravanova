@@ -523,7 +523,7 @@ func mustGetEnv(k string) string {
 
 type WebhookEvent struct {
 	ObjectType string `json:"object_type"`
-	ObjectId   string `json:"object_id"`
+	ObjectId   int    `json:"object_id"`
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -563,11 +563,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Close the request body to prevent resource leaks
 		defer r.Body.Close()
-
+		fmt.Printf("body: %s", r.Body)
+		fmt.Printf("parsing")
 		// Parse the JSON data into a struct
 		var event WebhookEvent
 		err = json.Unmarshal(body, &event)
 		if err != nil {
+			fmt.Printf("failed!!!!")
 			http.Error(w, "Failed to parse JSON data", http.StatusBadRequest)
 			return
 		}
@@ -576,12 +578,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 		if event.ObjectType == "activity" {
 			accessToken := getAccessToken()
-			workoutID, err := strconv.Atoi(event.ObjectId)
 
 			if err != nil {
 				fmt.Printf("invalid activity id")
 			}
-			workout, err := fetchWorkoutDetails(workoutID, accessToken)
+			workout, err := fetchWorkoutDetails(event.ObjectId, accessToken)
 			prompt := buildPrompt(workout)
 			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
 			summary, err := generateSummary(prompt)
