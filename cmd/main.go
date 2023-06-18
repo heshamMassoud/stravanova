@@ -369,7 +369,7 @@ func getAccessToken(athleteId int) string {
 
 	// Query a row from the access_tokens table
 	var accessToken AccessToken
-	query := fmt.Sprintf("SELECT token  FROM strava_access_tokens WHERE athlete_id=%d;", athleteId)
+	query := fmt.Sprintf("SELECT *  FROM strava_access_tokens WHERE athlete_id=%d;", athleteId)
 	err = db.QueryRow(query).Scan(&accessToken.AthleteId, &accessToken.Token, &accessToken.ExpiresAt)
 	if err != nil {
 		log.Fatal(err)
