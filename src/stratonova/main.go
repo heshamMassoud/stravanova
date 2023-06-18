@@ -2,13 +2,21 @@ package main
 
 import (
 	"bytes"
+	"cloud.google.com/go/cloudsqlconn"
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"io"
+	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 const (
@@ -41,6 +49,7 @@ func main() {
 	http.HandleFunc("/", mainPageHandler)
 	http.HandleFunc("/exchange_token", exchangeTokenHandler)
 	http.HandleFunc("/update-activity", updateActivityHandler)
+	http.HandleFunc("/token", tokenHandler)
 
 	// Start the HTTP server
 	err := http.ListenAndServe(":8080", nil)
@@ -55,6 +64,12 @@ func mainPageHandler(w http.ResponseWriter, r *http.Request) {
 	authURL := fmt.Sprintf("https://www.strava.com/oauth/authorize?client_id=%s&response_type=code&scope=activity:read_all,activity:write&approval_prompt=force&redirect_uri=%s/exchange_token", stravaClientID, redirectURI)
 	fmt.Fprintf(w, "In case you do not have an access token, please visit the following URL to authorize the application: %s", authURL)
 	fmt.Fprintf(w, "otherwise, you can already start using the app by visiting the following URL: %s", "https://stratonova-l5snujqyaq-ew.a.run.app/update-activity?access_token={access token}")
+}
+
+func tokenHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Attempting to fetch token from cloud sql.")
+	token := getAccessToken(13560298)
+	fmt.Fprintf(w, "Successfuly got an access token : %s", token)
 }
 
 func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -326,4 +341,84 @@ func openAI() {
 	The most important things I really like to know is how much effort was it for me compared to my
 		history as a runner. The weather. The route itself. How much time it took. The distance. And my pace. 
 		Put all this information in one paragraph in a funny concise way`
+}
+
+type AccessToken struct {
+	AthleteId int
+	Token     string
+	ExpiresAt time.Time
+}
+
+func getAccessToken(athleteId int) string {
+	// Open a connection to the database
+	db, err := connectWithConnector()
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("failed to open con!", err)
+	}
+	defer db.Close()
+
+	// Test the connection
+	err = db.Ping()
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("failed to ping!", err)
+	}
+
+	fmt.Println("Connected to the database!")
+
+	// Query a row from the access_tokens table
+	var accessToken AccessToken
+	query := fmt.Sprintf("SELECT token  FROM strava_access_tokens WHERE athlete_id=%d;", athleteId)
+	err = db.QueryRow(query).Scan(&accessToken.AthleteId, &accessToken.Token, &accessToken.ExpiresAt)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Access Token: AthleteId=%d, Token=%s, ExpiresAt=%s\n", accessToken.AthleteId, accessToken.Token, accessToken.ExpiresAt)
+
+	return accessToken.Token
+}
+
+func connectWithConnector() (*sql.DB, error) {
+	mustGetenv := func(k string) string {
+		v := os.Getenv(k)
+		if v == "" {
+			log.Fatalf("Fatal Error in connect_connector.go: %s environment variable not set.", k)
+		}
+		return v
+	}
+	// Note: Saving credentials in environment variables is convenient, but not
+	// secure - consider a more secure solution such as
+	// Cloud Secret Manager (https://cloud.google.com/secret-manager) to help
+	// keep passwords and other secrets safe.
+	var (
+		dbUser                 = mustGetenv("DB_USER")                  // e.g. 'my-db-user'
+		dbPwd                  = mustGetenv("DB_PASS")                  // e.g. 'my-db-password'
+		dbName                 = mustGetenv("DB_NAME")                  // e.g. 'my-database'
+		instanceConnectionName = mustGetenv("INSTANCE_CONNECTION_NAME") // e.g. 'project:region:instance'
+		usePrivate             = os.Getenv("PRIVATE_IP")
+	)
+
+	d, err := cloudsqlconn.NewDialer(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("cloudsqlconn.NewDialer: %w", err)
+	}
+	var opts []cloudsqlconn.DialOption
+	if usePrivate != "" {
+		opts = append(opts, cloudsqlconn.WithPrivateIP())
+	}
+	mysql.RegisterDialContext("cloudsqlconn",
+		func(ctx context.Context, addr string) (net.Conn, error) {
+			return d.Dial(ctx, instanceConnectionName, opts...)
+		})
+
+	dbURI := fmt.Sprintf("%s:%s@cloudsqlconn(localhost:3306)/%s?parseTime=true",
+		dbUser, dbPwd, dbName)
+
+	dbPool, err := sql.Open("mysql", dbURI)
+	if err != nil {
+		return nil, fmt.Errorf("sql.Open: %w", err)
+	}
+	return dbPool, nil
 }
