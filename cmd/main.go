@@ -521,6 +521,11 @@ func mustGetEnv(k string) string {
 	return v
 }
 
+type WebhookEvent struct {
+	ObjectType string `json:"object_type"`
+	ObjectId   string `json:"object_id"`
+}
+
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -549,8 +554,51 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	case "POST":
-		fmt.Printf("POST webhook recieved %s\n", r.Body)
-		fmt.Printf("POST webhook recieved %s\n", r.URL)
+		// Read the request body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+			return
+		}
+
+		// Close the request body to prevent resource leaks
+		defer r.Body.Close()
+
+		// Parse the JSON data into a struct
+		var event WebhookEvent
+		err = json.Unmarshal(body, &event)
+		if err != nil {
+			http.Error(w, "Failed to parse JSON data", http.StatusBadRequest)
+			return
+		}
+		if event.ObjectType == "activity" {
+			accessToken := getAccessToken()
+			workoutID, err := strconv.Atoi(event.ObjectId)
+
+			if err != nil {
+				fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
+			}
+			workout, err := fetchWorkoutDetails(workoutID, accessToken)
+			prompt := buildPrompt(workout)
+			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
+			summary, err := generateSummary(prompt)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return
+			}
+			fmt.Printf("Summary from chatgpt: %s\n", summary)
+
+			err = updateWorkout(workoutID, summary, generateActivityName(workout), accessToken)
+			if err != nil {
+				fmt.Println("Failed to update workout description:", err)
+				return
+			}
+			fmt.Fprintf(w, "Workout description updated successfully!")
+
+		} else {
+			http.Error(w, "Webhook event not supported yet.", http.StatusBadRequest)
+			return
+		}
 	default:
 		http.Error(w, "Sorry, only GET and POST are supported", http.StatusNotFound)
 	}
