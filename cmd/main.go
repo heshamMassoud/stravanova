@@ -36,6 +36,7 @@ type Workout struct {
 	Duration           int       `json:"moving_time"`
 	Laps               []Lap     `json:"laps"`
 	StartLocation      []float64 `json:"start_latlng"`
+	AverageSpeed       float64   `json:"average_speed"`
 }
 
 type Lap struct {
@@ -111,7 +112,13 @@ func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Updating workout description..")
 
-	err = updateWorkout(workoutID, generateDescriptionFromOpenAI(), generateActivityName(workout), accessToken)
+	summary, err := generateSummary(buildPrompt(workout))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	err = updateWorkout(workoutID, summary, generateActivityName(workout), accessToken)
 	if err != nil {
 		fmt.Println("Failed to update workout description:", err)
 		return
@@ -317,16 +324,85 @@ func updateWorkout(workoutID int, newDescription string, newName string, accessT
 	return nil
 }
 
-func generateDescriptionFromOpenAI() string {
-	return `
-Alright, buckle up for some running highlights! 
+type OpenAIRequest struct {
+	Prompt string `json:"prompt"`
+}
 
-Your recent adventure was a rollercoaster of effort and triumph. You pushed yourself to the limit, leaving your running history in awe. The weather played its part, adding a sprinkle of excitement to your journey. The route you chose was like a wild maze, keeping you on your toes and surprising you at every turn. Time flew by as you raced against it, clocking in at 1 hour and 25 minutes. You covered a whopping 12.1 kilometers, unleashing your inner gazelle. And let's not forget your pace, a sizzling 5 minutes and 8 seconds per kilometer, making Usain Bolt look twice. 
+type OpenAIResponse struct {
+	Choices []struct {
+		Message struct {
+			Content string `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+}
 
-It was an epic adventure, filled with sweat, determination, and a side of humor. Keep running and conquering those miles!
+func generateSummary(prompt string) (string, error) {
+	apiKey := mustGetEnv("OPENAI_API_KEY")
+	url := "https://api.openai.com/v1/chat/completions"
 
-Your friendly neighbourhood - Stratonova™️ ✌️🏴
-`
+	requestBody, err := json.Marshal(OpenAIRequest{Prompt: prompt})
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var openAIResp OpenAIResponse
+	err = json.Unmarshal(body, &openAIResp)
+	if err != nil {
+		return "", err
+	}
+
+	if len(openAIResp.Choices) > 0 {
+		return openAIResp.Choices[0].Message.Content, nil
+	}
+
+	return "", fmt.Errorf("No response received from ChatGPT")
+}
+
+func buildPrompt(workout Workout) string {
+	name := generateActivityName(workout)
+	kilometers := convertMetersToKilometers(workout.Distance)
+	duration := workout.Duration
+	elevationGain := workout.TotalElevationGain
+	latitude := workout.StartLocation[0]
+	longitude := workout.StartLocation[1]
+	averageSpeed := workout.AverageSpeed
+
+	return fmt.Sprintf(`
+	Based on the following information about a run I just did:
+	name: %s,
+	distance in kms: %f,
+	average speed: %f, (please convert that to km pace instead of speed)
+	duration in seconds: %d (please mention that in a human friendly format)
+	elevationGain: %f (only if that was high, mention that the run was hilly)
+
+	given the following latitude: %f and longitude: %f, mention where the run was done city and district wise 
+	(as if you are a local from this city)
+	
+	Please generate a summary in a story-telling exciting way rather
+	than a list. The story should be talking to me e.g. "You ..."
+		
+	Put all this information in one paragraph in a witty and concise way.`, name, kilometers, averageSpeed, duration, elevationGain, latitude, longitude)
 }
 
 func openAI() {
@@ -383,22 +459,15 @@ func getAccessToken() string {
 }
 
 func connectWithConnector() (*sql.DB, error) {
-	mustGetenv := func(k string) string {
-		v := os.Getenv(k)
-		if v == "" {
-			log.Fatalf("Fatal Error in connect_connector.go: %s environment variable not set.", k)
-		}
-		return v
-	}
 	// Note: Saving credentials in environment variables is convenient, but not
 	// secure - consider a more secure solution such as
 	// Cloud Secret Manager (https://cloud.google.com/secret-manager) to help
 	// keep passwords and other secrets safe.
 	var (
-		dbUser                 = mustGetenv("DB_USER")                  // e.g. 'my-db-user'
-		dbPwd                  = mustGetenv("DB_PASS")                  // e.g. 'my-db-password'
-		dbName                 = mustGetenv("DB_NAME")                  // e.g. 'my-database'
-		instanceConnectionName = mustGetenv("INSTANCE_CONNECTION_NAME") // e.g. 'project:region:instance'
+		dbUser                 = mustGetEnv("DB_USER")                  // e.g. 'my-db-user'
+		dbPwd                  = mustGetEnv("DB_PASS")                  // e.g. 'my-db-password'
+		dbName                 = mustGetEnv("DB_NAME")                  // e.g. 'my-database'
+		instanceConnectionName = mustGetEnv("INSTANCE_CONNECTION_NAME") // e.g. 'project:region:instance'
 		usePrivate             = os.Getenv("PRIVATE_IP")
 	)
 
@@ -423,4 +492,12 @@ func connectWithConnector() (*sql.DB, error) {
 		return nil, fmt.Errorf("sql.Open: %w", err)
 	}
 	return dbPool, nil
+}
+
+func mustGetEnv(k string) string {
+	v := os.Getenv(k)
+	if v == "" {
+		log.Fatalf("Fatal Error in connect_connector.go: %s environment variable not set.", k)
+	}
+	return v
 }
