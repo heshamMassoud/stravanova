@@ -542,6 +542,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 				}
+				fmt.Println(jsonResp)
 				w.Write(jsonResp)
 				return
 			} else {
