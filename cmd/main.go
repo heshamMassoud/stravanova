@@ -271,7 +271,7 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 		return Workout{}, err
 	}
 
-	prettyPrintJSON(string(body))
+	//prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
@@ -587,6 +587,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Printf("invalid activity id")
 			}
 			workout, err := fetchWorkoutDetails(event.ObjectId, accessToken)
+			fmt.Printf("Fetched Workout: %s", workout.Name)
 			prompt := buildPrompt(workout)
 			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
 			summary, err := generateSummary(prompt)
@@ -601,7 +602,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("Failed to update workout description:", err)
 				return
 			}
-			fmt.Fprintf(w, "Workout description updated successfully!")
+			fmt.Println("Workout description updated successfully!")
 
 		} else {
 			http.Error(w, "Webhook event not supported yet.", http.StatusBadRequest)
