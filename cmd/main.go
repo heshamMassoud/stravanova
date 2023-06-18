@@ -50,7 +50,7 @@ func main() {
 	// Define your handlers for different endpoints
 	http.HandleFunc("/", mainPageHandler)
 	http.HandleFunc("/exchange_token", exchangeTokenHandler)
-	http.HandleFunc("/update-activity", updateActivityHandler)
+	http.HandleFunc("/update_workout", updateActivityHandler)
 	http.HandleFunc("/token", tokenHandler)
 
 	// Start the HTTP server
