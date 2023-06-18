@@ -527,6 +527,7 @@ func mustGetEnv(k string) string {
 type WebhookEvent struct {
 	ObjectType string `json:"object_type"`
 	ObjectId   int    `json:"object_id"`
+	AspectType string `json:"aspect_type"`
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -579,7 +580,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("ObjectType %s", event.ObjectType)
 		fmt.Printf("ObjectId %s", event.ObjectId)
 
-		if event.ObjectType == "activity" {
+		if event.ObjectType == "activity" && event.AspectType == "create" {
 			accessToken := getAccessToken()
 
 			if err != nil {
