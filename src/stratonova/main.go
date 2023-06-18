@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 const (
@@ -72,21 +73,25 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 	accessToken := r.URL.Query().Get("access_token")
+	workoutID, err := strconv.Atoi(r.URL.Query().Get("activity_id"))
 
-	workoutID := 9173573412 // Replace with the ID of the workout you want to fetch
+	if err != nil {
+		fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
+	}
+
 	workout, err := fetchWorkoutDetails(workoutID, accessToken)
 	if err != nil {
 		fmt.Println("Failed to fetch workout details", err)
 		return
 	}
-	fmt.Println("Successfully fetched the workout 🎉", workout.Name)
+	fmt.Fprintf(w, "Successfully fetched the workout 🎉 %s", workout.Name)
 
 	// Print the workout details
-	fmt.Println("Workout ID: ", workout.ID)
-	fmt.Println("Workout Name: ", workout.Name)
-	fmt.Println("Distance: ", workout.Distance)
-	fmt.Println("Elevation Gain: ", workout.TotalElevationGain)
-	fmt.Println("Duration: ", workout.Duration)
+	fmt.Fprintf(w, "Workout ID: %s", workout.ID)
+	fmt.Fprintf(w, "Workout Name: %s", workout.Name)
+	fmt.Fprintf(w, "Distance: %s", workout.Distance)
+	fmt.Fprintf(w, "Elevation Gain: %s", workout.TotalElevationGain)
+	fmt.Fprintf(w, "Duration: %s", workout.Duration)
 
 	fmt.Println("Updating workout description..")
 
@@ -95,7 +100,7 @@ func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Failed to update workout description:", err)
 		return
 	}
-	fmt.Println("Workout description updated successfully!")
+	fmt.Fprintf(w, "Workout description updated successfully!")
 }
 
 func generateActivityName(workout Workout) string {
