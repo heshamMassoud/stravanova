@@ -303,8 +303,8 @@ func updateWorkout(workoutID int, newDescription string, newName string, accessT
 	// Set the new description in the request body
 	req.Header.Set("Content-Type", "application/json")
 	payload := map[string]interface{}{
-		//"description": newDescription,
-		"name": newName,
+		"description": newDescription,
+		"name":        newName,
 	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
