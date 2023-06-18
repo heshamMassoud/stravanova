@@ -554,6 +554,8 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				}
 
 				// Write the JSON data to the response writer
+				fmt.Println("Printing json data to check if its valid")
+				fmt.Println(jsonData)
 				w.Write(jsonData)
 			} else {
 				http.Error(w, "403 Forbidden", http.StatusForbidden)
