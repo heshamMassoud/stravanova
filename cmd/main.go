@@ -353,10 +353,12 @@ func generateSummary(prompt string) (string, error) {
 		Content: prompt,
 		Role:    "user",
 	}
-	var messages []Message
-	messages[0] = message
 
-	requestBody, err := json.Marshal(OpenAIRequest{Model: "gpt-3.5-turbo", Messages: messages})
+	messages := []Message{message}
+	requestBody, err := json.Marshal(OpenAIRequest{
+		Model:    "gpt-3.5-turbo",
+		Messages: messages,
+	})
 	if err != nil {
 		return "", err
 	}
