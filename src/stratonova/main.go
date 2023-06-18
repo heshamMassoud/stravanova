@@ -198,6 +198,8 @@ func exchangeCodeForToken(code string) (string, error) {
 		return "", err
 	}
 
+	prettyPrintJSON(string(body))
+
 	fmt.Println("Successfully fetched token for athlete: 🎉", string(body))
 
 	// Check the response status code
