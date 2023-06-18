@@ -112,11 +112,14 @@ func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("Updating workout description..")
 
-	summary, err := generateSummary(buildPrompt(workout))
+	prompt := buildPrompt(workout)
+	fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
+	summary, err := generateSummary(prompt)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
+	fmt.Printf("Summary from chatgpt: %s\n", summary)
 
 	err = updateWorkout(workoutID, summary, generateActivityName(workout), accessToken)
 	if err != nil {
@@ -267,7 +270,7 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 		return Workout{}, err
 	}
 
-	prettyPrintJSON(string(body))
+	//prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
