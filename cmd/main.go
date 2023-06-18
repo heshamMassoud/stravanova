@@ -259,7 +259,7 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 		return Workout{}, err
 	}
 
-	//prettyPrintJSON(string(body))
+	prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
