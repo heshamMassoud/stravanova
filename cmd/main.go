@@ -271,7 +271,7 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 		return Workout{}, err
 	}
 
-	//prettyPrintJSON(string(body))
+	prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
@@ -571,12 +571,15 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Failed to parse JSON data", http.StatusBadRequest)
 			return
 		}
+		fmt.Printf("ObjectType %s", event.ObjectType)
+		fmt.Printf("ObjectId %s", event.ObjectId)
+
 		if event.ObjectType == "activity" {
 			accessToken := getAccessToken()
 			workoutID, err := strconv.Atoi(event.ObjectId)
 
 			if err != nil {
-				fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
+				fmt.Printf("invalid activity id")
 			}
 			workout, err := fetchWorkoutDetails(workoutID, accessToken)
 			prompt := buildPrompt(workout)
