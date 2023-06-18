@@ -406,8 +406,12 @@ func buildPrompt(workout Workout) string {
 	kilometers := convertMetersToKilometers(workout.Distance)
 	duration := workout.Duration
 	elevationGain := workout.TotalElevationGain
-	latitude := workout.StartLocation[0]
-	longitude := workout.StartLocation[1]
+	latitude := float64(0)
+	longitude := float64(0)
+	if len(workout.StartLocation) > 0 {
+		latitude = workout.StartLocation[0]
+		longitude = workout.StartLocation[1]
+	}
 	averageSpeed := workout.AverageSpeed
 
 	return fmt.Sprintf(`
