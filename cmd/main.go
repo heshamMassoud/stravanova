@@ -52,6 +52,7 @@ func main() {
 	http.HandleFunc("/exchange_token", exchangeTokenHandler)
 	http.HandleFunc("/update_workout", updateActivityHandler)
 	http.HandleFunc("/token", tokenHandler)
+	http.HandleFunc("/webhook", webhookHandler)
 
 	// Start the HTTP server
 	err := http.ListenAndServe(":8080", nil)
@@ -518,4 +519,30 @@ func mustGetEnv(k string) string {
 		log.Fatalf("Fatal Error in connect_connector.go: %s environment variable not set.", k)
 	}
 	return v
+}
+
+func webhookHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		fmt.Fprintf(w, "GET webhook recieved %s", r.URL)
+		verifyToken := mustGetEnv("STRAVA_VERIFY_TOKEN")
+		// Parses the query params
+		mode := r.URL.Query().Get("hub.mode")
+		token := r.URL.Query().Get("hub.verify_token")
+		challenge := r.URL.Query().Get("hub.challenge")
+
+		if mode != "" && token != "" {
+			if mode == "subscribe" && token == verifyToken {
+				fmt.Println("WEBHOOK_VERIFIED")
+				fmt.Fprintf(w, "hub.challenge: %s", challenge)
+			} else {
+				http.Error(w, "403 Forbidden", http.StatusForbidden)
+			}
+		}
+	case "POST":
+		fmt.Printf("POST webhook recieved %s\n", r.Body)
+		fmt.Printf("POST webhook recieved %s\n", r.URL)
+	default:
+		http.Error(w, "Sorry, only GET and POST are supported", http.StatusNotFound)
+	}
 }
