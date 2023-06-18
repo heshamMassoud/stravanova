@@ -21,6 +21,7 @@ import (
 
 const (
 	redirectURI = "https://stratonova-l5snujqyaq-ew.a.run.app"
+	AthleteID   = 13560298
 )
 
 type AccessTokenResponse struct {
@@ -68,7 +69,7 @@ func mainPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func tokenHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Attempting to fetch token from cloud sql.")
-	token := getAccessToken(13560298)
+	token := getAccessToken()
 	fmt.Fprintf(w, "Successfuly got an access token : %s", token)
 }
 
@@ -87,8 +88,8 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
-	accessToken := r.URL.Query().Get("access_token")
-	workoutID, err := strconv.Atoi(r.URL.Query().Get("activity_id"))
+	accessToken := getAccessToken()
+	workoutID, err := strconv.Atoi(r.URL.Query().Get("workout_id"))
 
 	if err != nil {
 		fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
@@ -349,7 +350,7 @@ type AccessToken struct {
 	ExpiresAt time.Time
 }
 
-func getAccessToken(athleteId int) string {
+func getAccessToken() string {
 	// Open a connection to the database
 	db, err := connectWithConnector()
 	if err != nil {
@@ -369,7 +370,7 @@ func getAccessToken(athleteId int) string {
 
 	// Query a row from the access_tokens table
 	var accessToken AccessToken
-	query := fmt.Sprintf("SELECT *  FROM strava_access_tokens WHERE athlete_id=%d;", athleteId)
+	query := fmt.Sprintf("SELECT *  FROM strava_access_tokens WHERE athlete_id=%d;", AthleteID)
 	err = db.QueryRow(query).Scan(&accessToken.AthleteId, &accessToken.Token, &accessToken.ExpiresAt)
 	if err != nil {
 		log.Fatal(err)
