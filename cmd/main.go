@@ -234,6 +234,7 @@ func exchangeCodeForToken(code string) (string, error) {
 }
 
 func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
+	fmt.Printf("Fetching workout: %d with access token: %s", workoutID, accessToken)
 	// Create a new HTTP client
 	client := http.Client{}
 
