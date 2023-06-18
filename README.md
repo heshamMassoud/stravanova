@@ -20,8 +20,7 @@ In the future, Stratonova™ will do more spicy things like post your run story 
 
 ### Run locally
 ````bash
-cd stratonova/src
-go run main.go
+go run cmd/main.go
 ````
 
 ### Debug
