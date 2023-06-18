@@ -538,8 +538,6 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		if mode != "" && token != "" {
 			if mode == "subscribe" && token == verifyToken {
 				fmt.Println("WEBHOOK_VERIFIED")
-				fmt.Fprintf(w, "hub.challenge: %s", challenge)
-
 				response := WebhookResponse{
 					HubChallenge: challenge,
 				}
