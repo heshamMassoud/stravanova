@@ -328,7 +328,13 @@ func updateWorkout(workoutID int, newDescription string, newName string, accessT
 }
 
 type OpenAIRequest struct {
-	Prompt string `json:"prompt"`
+	Messages []Message `json:"messages"`
+	Model    string    `json:"model"`
+}
+
+type Message struct {
+	Content string `json:"content"`
+	Role    string `json:"role"`
 }
 
 type OpenAIResponse struct {
@@ -343,7 +349,14 @@ func generateSummary(prompt string) (string, error) {
 	apiKey := mustGetEnv("OPENAI_API_KEY")
 	url := "https://api.openai.com/v1/chat/completions"
 
-	requestBody, err := json.Marshal(OpenAIRequest{Prompt: prompt})
+	message := Message{
+		Content: prompt,
+		Role:    "user",
+	}
+	var messages []Message
+	messages[0] = message
+
+	requestBody, err := json.Marshal(OpenAIRequest{Model: "gpt-3.5-turbo", Messages: messages})
 	if err != nil {
 		return "", err
 	}
