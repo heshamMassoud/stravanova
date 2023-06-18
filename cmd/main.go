@@ -521,10 +521,6 @@ func mustGetEnv(k string) string {
 	return v
 }
 
-type WebhookResponse struct {
-	HubChallenge string `json:"hub.challenge"`
-}
-
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -538,25 +534,16 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		if mode != "" && token != "" {
 			if mode == "subscribe" && token == verifyToken {
 				fmt.Println("WEBHOOK_VERIFIED")
-				response := WebhookResponse{
-					HubChallenge: challenge,
-				}
-
-				// Set the Content-Type header to application/json
+				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
-
-				// Marshal the response struct into JSON
-				jsonData, err := json.Marshal(response)
+				resp := make(map[string]string)
+				resp["hub.challenge"] = challenge
+				jsonResp, err := json.Marshal(resp)
 				if err != nil {
-					// Handle error if the struct couldn't be marshaled
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
+					log.Fatalf("Error happened in JSON marshal. Err: %s", err)
 				}
-
-				// Write the JSON data to the response writer
-				fmt.Println("Printing json data to check if its valid")
-				fmt.Println(jsonData)
-				w.Write(jsonData)
+				w.Write(jsonResp)
+				return
 			} else {
 				http.Error(w, "403 Forbidden", http.StatusForbidden)
 			}
