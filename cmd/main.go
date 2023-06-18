@@ -524,7 +524,6 @@ func mustGetEnv(k string) string {
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		fmt.Fprintf(w, "GET webhook recieved %s", r.URL)
 		verifyToken := mustGetEnv("STRAVA_VERIFY_TOKEN")
 		// Parses the query params
 		mode := r.URL.Query().Get("hub.mode")
