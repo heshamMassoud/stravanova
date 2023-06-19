@@ -25,7 +25,9 @@ const (
 )
 
 type AccessTokenResponse struct {
-	AccessToken string `json:"access_token"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    int64  `json:"expires_at"`
 }
 
 type Workout struct {
@@ -81,12 +83,12 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Successfully got the auth code 🎉", authorizationCode)
 
 	// Step 3: Exchange the authorization code for an access token
-	accessToken, err := exchangeCodeForToken(authorizationCode)
+	accessToken, err := getTokenFromStrava(authorizationCode, "")
 	if err != nil {
 		fmt.Println("Failed to exchange authorization code for access token:", err)
 		return
 	}
-	fmt.Fprintf(w, "Successfully got an accessToken 🎉%s", accessToken)
+	fmt.Fprintf(w, "Successfully got an accessToken 🎉%s", accessToken.AccessToken)
 }
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
@@ -194,35 +196,42 @@ func prettyPrintJSON(jsonStr string) {
 	fmt.Println(string(prettyJSON))
 }
 
-func exchangeCodeForToken(code string) (string, error) {
+func getTokenFromStrava(code string, refreshToken string) (AccessTokenResponse, error) {
 	// Create a new HTTP client
 	client := http.Client{}
 
 	// Create a POST request to exchange the authorization code for an access token
 	req, err := http.NewRequest("POST", "https://www.strava.com/oauth/token", nil)
 	if err != nil {
-		return "", err
+		return AccessTokenResponse{}, err
 	}
 
 	// Set the request parameters
 	params := req.URL.Query()
 	params.Add("client_id", os.Getenv("STRAVA_CLIENT_ID"))
 	params.Add("client_secret", os.Getenv("STRAVA_CLIENT_SECRET"))
-	params.Add("code", code)
-	params.Add("grant_type", "authorization_code")
+
+	if code != "" {
+		params.Add("code", code)
+		params.Add("grant_type", "authorization_code")
+	} else {
+		params.Add("refresh_token", refreshToken)
+		params.Add("grant_type", "refresh_token")
+	}
+
 	req.URL.RawQuery = params.Encode()
 
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return AccessTokenResponse{}, err
 	}
 	defer resp.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return AccessTokenResponse{}, err
 	}
 
 	prettyPrintJSON(string(body))
@@ -231,17 +240,17 @@ func exchangeCodeForToken(code string) (string, error) {
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request failed with status: %d, response: %s", resp.StatusCode, string(body))
+		return AccessTokenResponse{}, fmt.Errorf("request failed with status: %d, response: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse the response body to get the access token
 	var tokenResp AccessTokenResponse
 	err = json.Unmarshal(body, &tokenResp)
 	if err != nil {
-		return "", err
+		return AccessTokenResponse{}, err
 	}
 
-	return tokenResp.AccessToken, nil
+	return tokenResp, nil
 }
 
 func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
@@ -453,6 +462,11 @@ type AccessToken struct {
 	ExpiresAt time.Time
 }
 
+type RefreshToken struct {
+	AthleteId    int
+	RefreshToken string
+}
+
 func getAccessToken() string {
 	// Open a connection to the database
 	db, err := connectWithConnector()
@@ -471,17 +485,53 @@ func getAccessToken() string {
 
 	fmt.Println("Connected to the database!")
 
-	// Query a row from the access_tokens table
-	var accessToken AccessToken
-	query := fmt.Sprintf("SELECT *  FROM strava_access_tokens WHERE athlete_id=%d;", AthleteID)
-	err = db.QueryRow(query).Scan(&accessToken.AthleteId, &accessToken.Token, &accessToken.ExpiresAt)
-	if err != nil {
-		log.Fatal(err)
+	accessToken := getAccessTokenFromSQL(db, AthleteID)
+	if accessToken.ExpiresAt.Before(time.Now()) {
+		refreshToken := getRefreshTokenFromSQL(db, AthleteID)
+		newAccessToken, err := getTokenFromStrava("", refreshToken.RefreshToken)
+		if err != nil {
+			log.Fatalf("Failed to refresh the token on strava. Err: %s", err)
+		}
+		updateTokens(db, AthleteID, newAccessToken)
 	}
 
 	fmt.Printf("Access Token: AthleteId=%d, Token=%s, ExpiresAt=%s\n", accessToken.AthleteId, accessToken.Token, accessToken.ExpiresAt)
 
 	return accessToken.Token
+}
+
+func getAccessTokenFromSQL(db *sql.DB, athleteID int) AccessToken {
+	var accessToken AccessToken
+	query := fmt.Sprintf("SELECT *  FROM strava_access_tokens WHERE athlete_id=%d;", athleteID)
+	err := db.QueryRow(query).Scan(&accessToken.AthleteId, &accessToken.Token, &accessToken.ExpiresAt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return accessToken
+}
+
+func getRefreshTokenFromSQL(db *sql.DB, athleteID int) RefreshToken {
+	var refreshToken RefreshToken
+	query := fmt.Sprintf("SELECT *  FROM strava_refresh_tokens WHERE athlete_id=%d;", athleteID)
+	err := db.QueryRow(query).Scan(&refreshToken.AthleteId, &refreshToken.RefreshToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return refreshToken
+}
+
+func updateTokens(db *sql.DB, athleteID int, token AccessTokenResponse) {
+	updateAccessToken := fmt.Sprintf("UPDATE strava_access_tokens SET token='%s', expires_at='%s' WHERE athlete_id=%d;", token.AccessToken, token.ExpiresAt, athleteID)
+	_, err := db.Exec(updateAccessToken)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	updateRefreshToken := fmt.Sprintf("UPDATE strava_refresh_tokens SET refresh_token='%s' WHERE athlete_id=%d;", token.RefreshToken, athleteID)
+	_, err = db.Exec(updateRefreshToken)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func connectWithConnector() (*sql.DB, error) {
@@ -577,12 +627,9 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		var event WebhookEvent
 		err = json.Unmarshal(body, &event)
 		if err != nil {
-			fmt.Printf("failed!!!!")
 			http.Error(w, "Failed to parse JSON data", http.StatusBadRequest)
 			return
 		}
-		fmt.Printf("ObjectType %s", event.ObjectType)
-		fmt.Printf("ObjectId %s", event.ObjectId)
 
 		if event.ObjectType == "activity" && event.AspectType == "create" {
 			accessToken := getAccessToken()
