@@ -522,7 +522,7 @@ func getRefreshTokenFromSQL(db *sql.DB, athleteID int) RefreshToken {
 
 func updateTokens(db *sql.DB, athleteID int, token AccessTokenResponse) {
 	// Prepare the SQL statement
-	updateAccessTokenStmt, err := db.Prepare("UPDATE strava_access_tokens SET token='?', expires_at=? WHERE athlete_id=?;")
+	updateAccessTokenStmt, err := db.Prepare("UPDATE strava_access_tokens SET token=?, expires_at=? WHERE athlete_id=?;")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -535,7 +535,7 @@ func updateTokens(db *sql.DB, athleteID int, token AccessTokenResponse) {
 	}
 
 	// Prepare the SQL statement
-	updateRefreshTokenStmt, err := db.Prepare("UPDATE strava_refresh_tokens SET refresh_token='?' WHERE athlete_id=?;")
+	updateRefreshTokenStmt, err := db.Prepare("UPDATE strava_refresh_tokens SET refresh_token=? WHERE athlete_id=?;")
 	if err != nil {
 		log.Fatal(err)
 	}
