@@ -148,7 +148,7 @@ func generateActivityName(workout Workout) string {
 	totalLaps := len(workout.Laps)
 	totalKms := convertMetersToKilometers(workout.Distance)
 
-	if hasMoreLapsThanKms(totalLaps, totalKms) {
+	if hasMoreLapsThanKms(totalLaps, math.Ceil(totalKms)) {
 		// its either interval or threshold or progressive
 		if isIntervalTraining(workout) {
 			return "Interval training 💪🛤️"
@@ -176,8 +176,9 @@ func isSpeedJump(lap1 Lap, lap2 Lap) bool {
 }
 
 func convertMetersToKilometers(meters float64) float64 {
-	kilometers := math.Ceil(meters / 1000)
-	return kilometers
+	kilometers := meters / 1000.0
+	rounded := math.Round(kilometers*10) / 10.0
+	return rounded
 }
 
 func prettyPrintJSON(jsonStr string) {
@@ -428,8 +429,8 @@ func buildPrompt(workout Workout) string {
 	distance of around %f kms,
 	duration in seconds: %d (please mention that in a human friendly format),	
     
-	elevation gain of %f (only if it was more than 90, mention that the run was hilly, otherwise you can ignore mentioning elevation),
-	given the following latitude: %f and longitude: %f, only if they are not of value 0,mention where the run was done city and district-wise 
+	using this elevation gain: %f (only mention the elevation gain if the workout had high one),
+	given the following latitude: %f and longitude: %f, only if they are not of value 0, mention where the %s was done city and district-wise 
 	(as if you are a local from this city)
 	
 	Please generate a summary in a story-telling exciting way rather
@@ -445,7 +446,8 @@ func buildPrompt(workout Workout) string {
 		duration,
 		elevationGain,
 		latitude,
-		longitude)
+		longitude,
+		workout.SportType)
 }
 
 func openAI() {
