@@ -521,7 +521,7 @@ func getRefreshTokenFromSQL(db *sql.DB, athleteID int) RefreshToken {
 }
 
 func updateTokens(db *sql.DB, athleteID int, token AccessTokenResponse) {
-	updateAccessToken := fmt.Sprintf("UPDATE strava_access_tokens SET token='%s', expires_at='%s' WHERE athlete_id=%d;", token.AccessToken, token.ExpiresAt, athleteID)
+	updateAccessToken := fmt.Sprintf("UPDATE strava_access_tokens SET token='%s', expires_at='%s' WHERE athlete_id=%d;", token.AccessToken, time.Unix(token.ExpiresAt, 0), athleteID)
 	_, err := db.Exec(updateAccessToken)
 	if err != nil {
 		log.Fatal(err)
