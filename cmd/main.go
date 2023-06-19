@@ -521,14 +521,28 @@ func getRefreshTokenFromSQL(db *sql.DB, athleteID int) RefreshToken {
 }
 
 func updateTokens(db *sql.DB, athleteID int, token AccessTokenResponse) {
-	updateAccessToken := fmt.Sprintf("UPDATE strava_access_tokens SET token='%s', expires_at='%s' WHERE athlete_id=%d;", token.AccessToken, time.Unix(token.ExpiresAt, 0), athleteID)
-	_, err := db.Exec(updateAccessToken)
+	// Prepare the SQL statement
+	updateAccessTokenStmt, err := db.Prepare("UPDATE strava_access_tokens SET token='?', expires_at=? WHERE athlete_id=?;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer updateAccessTokenStmt.Close()
+
+	// Execute the SQL statement with the time value as the parameter
+	_, err = updateAccessTokenStmt.Exec(token.AccessToken, time.Unix(token.ExpiresAt, 0), athleteID)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	updateRefreshToken := fmt.Sprintf("UPDATE strava_refresh_tokens SET refresh_token='%s' WHERE athlete_id=%d;", token.RefreshToken, athleteID)
-	_, err = db.Exec(updateRefreshToken)
+	// Prepare the SQL statement
+	updateRefreshTokenStmt, err := db.Prepare("UPDATE strava_refresh_tokens SET refresh_token='?' WHERE athlete_id=?;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer updateRefreshTokenStmt.Close()
+
+	// Execute the SQL statement with the time value as the parameter
+	_, err = updateRefreshTokenStmt.Exec(token.RefreshToken, athleteID)
 	if err != nil {
 		log.Fatal(err)
 	}
