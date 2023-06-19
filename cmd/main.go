@@ -33,6 +33,7 @@ type AccessTokenResponse struct {
 type Workout struct {
 	ID                 int       `json:"id"`
 	Name               string    `json:"name"`
+	SportType          string    `json:"sport_type"`
 	Distance           float64   `json:"distance"`
 	TotalElevationGain float64   `json:"total_elevation_gain"`
 	Duration           int       `json:"moving_time"`
@@ -421,23 +422,31 @@ func buildPrompt(workout Workout) string {
 		latitude = workout.StartLocation[0]
 		longitude = workout.StartLocation[1]
 	}
-	averageSpeed := workout.AverageSpeed
+	// averageSpeed := workout.AverageSpeed (convert that to km pace instead of speed)
 
 	return fmt.Sprintf(`
-	Based on the following information about a run I just did:
-	name: %s,
-	distance in kms: %f,
-	average speed: %f, (please convert that to km pace instead of speed)
-	duration in seconds: %d (please mention that in a human friendly format)
-	elevationGain: %f (only if that was high, mention that the run was hilly)
-
-	given the following latitude: %f and longitude: %f, mention where the run was done city and district wise 
+	Based on the following information about a %s I just did:
+	distance of around %f kms,
+	duration in seconds: %d (please mention that in a human friendly format),	
+    
+	elevation gain of %f (only if it was more than 90, mention that the run was hilly, otherwise you can ignore mentioning elevation),
+	given the following latitude: %f and longitude: %f, only if they are not of value 0,mention where the run was done city and district-wise 
 	(as if you are a local from this city)
 	
 	Please generate a summary in a story-telling exciting way rather
 	than a list. The story should be talking to me e.g. "You ..."
+
+	It should be written in a format to be posted as a workout description in Strava, in my own style of writing. 
+
+	Also include a joke or some kind of unpredictable funny comments.
 		
-	Put all this information in one paragraph in a witty and concise way.`, name, kilometers, averageSpeed, duration, elevationGain, latitude, longitude)
+	Put all this information in one paragraph in a witty and concise way.`,
+		workout.SportType,
+		kilometers,
+		duration,
+		elevationGain,
+		latitude,
+		longitude)
 }
 
 func openAI() {
