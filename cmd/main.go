@@ -412,7 +412,6 @@ func generateSummary(prompt string) (string, error) {
 }
 
 func buildPrompt(workout Workout) string {
-	name := generateActivityName(workout)
 	kilometers := convertMetersToKilometers(workout.Distance)
 	duration := workout.Duration
 	elevationGain := workout.TotalElevationGain
