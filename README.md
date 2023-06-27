@@ -55,11 +55,12 @@ go build -v cmd/main.go
 go run cmd/main.go
 ````
 
-### Accessing the DB
-The app uses a google Cloud SQL instance for persisting Strava Auth tokens. The DB can be accessed here: https://console.cloud.google.com/sql/instances/stratonova/users?project=stratonova
-
 
 ### Debug
 ````bash
 dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient
 ````
+
+
+### Accessing the DB
+The app uses a google Cloud SQL instance for persisting Strava Auth tokens. The DB can be accessed here: https://console.cloud.google.com/sql/instances/stratonova/users?project=stratonova
