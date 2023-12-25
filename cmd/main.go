@@ -97,18 +97,17 @@ func exchangeTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 	accessToken := getAccessToken()
-	workoutID, err := strconv.Atoi(r.URL.Query().Get("workout_id"))
 
+	workoutID, err := strconv.Atoi(r.URL.Query().Get("workout_id"))
 	if err != nil {
 		fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
 	}
 
-	workouts, err := fetchWeekWorkouts(accessToken)
+	workouts, err := fetchWeekWorkouts(w, accessToken)
 	if err != nil {
 		fmt.Println("Failed to fetch workout details", err)
 		return
 	}
-	//fmt.Fprintf(w, "Successfully fetched the workout 🎉 %s", workout.Name)
 
 	prompt := buildPrompt(workouts)
 	fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
@@ -261,7 +260,7 @@ func getLastWeekTimeEpoch() int64 {
 	return lastWeek.Unix()
 }
 
-func fetchWeekWorkouts(accessToken string) ([]Workout, error) {
+func fetchWeekWorkouts(w http.ResponseWriter, accessToken string) ([]Workout, error) {
 	//fmt.Printf("Fetching workout: %d with access token: %s", workoutID, accessToken)
 	// Create a new HTTP client
 	client := http.Client{}
@@ -288,7 +287,7 @@ func fetchWeekWorkouts(accessToken string) ([]Workout, error) {
 		return []Workout{}, err
 	}
 
-	//prettyPrintJSON(string(body))
+	prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
@@ -301,6 +300,8 @@ func fetchWeekWorkouts(accessToken string) ([]Workout, error) {
 	if err != nil {
 		return []Workout{}, err
 	}
+
+	_, _ = fmt.Fprintf(w, "Successfully fetched the %d workouts 🎉 ", len(workouts))
 
 	return workouts, nil
 }
@@ -663,7 +664,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		if event.ObjectType == "activity" && event.AspectType == "create" && isTodayMonday() {
 			accessToken := getAccessToken()
 
-			workouts, err := fetchWeekWorkouts(accessToken)
+			workouts, err := fetchWeekWorkouts(nil, accessToken)
 			prompt := buildPrompt(workouts)
 			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
 
