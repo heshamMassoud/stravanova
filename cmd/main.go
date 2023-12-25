@@ -665,7 +665,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		if event.ObjectType == "activity" && event.AspectType == "create" && isTodayMonday() {
 			accessToken := getAccessToken()
 
-			workouts, err := fetchWeekWorkouts(nil, accessToken)
+			workouts, err := fetchWeekWorkouts(w, accessToken)
 			prompt := buildPrompt(workouts)
 			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
 
