@@ -375,7 +375,7 @@ func generateSummary(prompt string) (string, error) {
 
 	messages := []Message{message}
 	requestBody, err := json.Marshal(OpenAIRequest{
-		Model:    "gpt-3.5-turbo",
+		Model:    "gpt-4-1106-preview",
 		Messages: messages,
 	})
 	if err != nil {
