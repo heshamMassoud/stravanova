@@ -310,6 +310,8 @@ func updateWorkout(workoutID int, newDescription string, newName string, accessT
 	// Create a new HTTP client
 	client := http.Client{}
 
+	fmt.Printf("updating workout on strava with id: %d: %s\n", workoutID, newDescription)
+
 	// Create a PUT request to update the workout description
 	req, err := http.NewRequest("PUT", fmt.Sprintf("https://www.strava.com/api/v3/activities/%d", workoutID), nil)
 	if err != nil {
