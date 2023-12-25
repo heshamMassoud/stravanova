@@ -428,7 +428,6 @@ func buildPrompt(workouts []Workout) string {
 	sb.WriteString("Generate a weekly running summary based on the following workouts:\n\n")
 
 	for _, w := range workouts {
-		fmt.Printf("workout: %s\n", w.Name)
 		sb.WriteString(fmt.Sprintf(
 			"- %s on %s: %.2f km, duration %s, elevation gain %.2f meters, average heart rate %.1f bpm. \n",
 			w.Name,
@@ -447,7 +446,7 @@ func buildPrompt(workouts []Workout) string {
 		"- total weekly distance (mention that in context for what’s to come next week)\n- the summary should be" +
 		" written in an engaging way for the reader - not a big chunk of text.\n" +
 		"- some insights on based last week’s runs you are usually more performant at this time of" +
-		" the day based on heart rate and effort. \n" +
+		" the day based on the average heart rate and effort. \n" +
 		" Also the summary, should consider the grand scheme of things which is training for the berlin marathon in September 2024\n\n")
 
 	return sb.String()
