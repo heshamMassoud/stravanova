@@ -70,7 +70,7 @@ jobs:
             DB_USER=${{ secrets.DB_USER }}
             DB_PASS=${{ secrets.DB_PASS }}
             DB_NAME=stratonova
-            INSTANCE_CONNECTION_NAME=stratonova:europe-west1:stratonova
+            INSTANCE_CONNECTION_NAME=stratonova:europe-west10:stratonova
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           # NOTE: If using a pre-built image, update the image name here
