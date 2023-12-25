@@ -287,7 +287,7 @@ func fetchWeekWorkouts(w http.ResponseWriter, accessToken string) ([]Workout, er
 		return []Workout{}, err
 	}
 
-	prettyPrintJSON(string(body))
+	// prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
@@ -426,16 +426,15 @@ func buildPrompt(workouts []Workout) string {
 	sb.WriteString("Generate a weekly running summary based on the following workouts:\n\n")
 
 	for _, w := range workouts {
+		fmt.Printf("workout: %s\n", w.Name)
 		sb.WriteString(fmt.Sprintf(
-			"- %s on %s: %.2f km, duration %s, elevation gain %.2f meters, average heart rate %.1f bpm. Location: [%.2f, %.2f].\n",
+			"- %s on %s: %.2f km, duration %s, elevation gain %.2f meters, average heart rate %.1f bpm. \n",
 			w.Name,
 			w.Date.Format("Monday"),
 			w.Distance/1000,
 			humanReadableDuration(w.Duration),
 			w.TotalElevationGain,
 			w.HeartRate,
-			w.StartLocation[0],
-			w.StartLocation[1],
 		))
 	}
 
@@ -511,7 +510,7 @@ func getAccessToken() string {
 		updateTokens(db, AthleteID, newAccessToken)
 	}
 
-	fmt.Printf("Access Token: AthleteId=%d, Token=%s, ExpiresAt=%s\n", accessToken.AthleteId, accessToken.Token, accessToken.ExpiresAt)
+	fmt.Printf("Got Access Token! : AthleteId=%d, Token=%s\n", accessToken.AthleteId, accessToken.Token)
 
 	return accessToken.Token
 }
