@@ -440,9 +440,15 @@ func buildPrompt(workouts []Workout) string {
 		))
 	}
 
-	sb.WriteString("\nWrite the summary in a story-telling, exciting, and motivational way, suitable for a Strava post. Please generaete the summary. Mentioning when I was running with people. Insights on best times of days for performance." +
-		"- total weekly distance (mention that in context for what’s to come next week)\n- the summary should be written in an engaging way for the reader - not a big chunk of text.\n- some insights on based last week’s runs you are usually more performant at this time of the day based on heart rate and effort. \n" +
-		" etc\n\n")
+	sb.WriteString("\nWrite the summary in a story-telling, exciting, and motivational way, humble way suitable for " +
+		"a Strava post (no need for hashtags). Don't make it cheesy." +
+		" The summary should consider when I was running with people or solo. " +
+		"Insights on best times of days for performance." +
+		"- total weekly distance (mention that in context for what’s to come next week)\n- the summary should be" +
+		" written in an engaging way for the reader - not a big chunk of text.\n" +
+		"- some insights on based last week’s runs you are usually more performant at this time of" +
+		" the day based on heart rate and effort. \n" +
+		" Also the summary, should consider the grand scheme of things which is training for the berlin marathon in September 2024\n\n")
 
 	return sb.String()
 }
@@ -662,7 +668,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if event.ObjectType == "activity" && event.AspectType == "create" && isTodayMonday() {
+		if event.ObjectType == "activity" && event.AspectType == "create" && isTodaySunday() {
 			accessToken := getAccessToken()
 
 			workouts, err := fetchWeekWorkouts(w, accessToken)
@@ -694,11 +700,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// isTodayMonday checks if today is Monday.
-func isTodayMonday() bool {
+// isTodaySunday checks if today is Monday.
+func isTodaySunday() bool {
 	// Get the current day of the week.
 	today := time.Now().Weekday()
 
 	// Check if today is Monday.
-	return today == time.Monday
+	return today == time.Sunday
 }
