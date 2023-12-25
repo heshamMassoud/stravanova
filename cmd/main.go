@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -40,6 +41,8 @@ type Workout struct {
 	Laps               []Lap     `json:"laps"`
 	StartLocation      []float64 `json:"start_latlng"`
 	AverageSpeed       float64   `json:"average_speed"`
+	Date               time.Time `json:"start_date"`
+	HeartRate          float64   `json:"average_heartrate"`
 }
 
 type Lap struct {
@@ -100,23 +103,14 @@ func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Invalid activity id 🙃🙃🙃: %s", err)
 	}
 
-	workout, err := fetchWorkoutDetails(workoutID, accessToken)
+	workouts, err := fetchWeekWorkouts(accessToken)
 	if err != nil {
 		fmt.Println("Failed to fetch workout details", err)
 		return
 	}
-	fmt.Fprintf(w, "Successfully fetched the workout 🎉 %s", workout.Name)
+	//fmt.Fprintf(w, "Successfully fetched the workout 🎉 %s", workout.Name)
 
-	// Print the workout details
-	fmt.Fprintf(w, "Workout ID: %s", workout.ID)
-	fmt.Fprintf(w, "Workout Name: %s", workout.Name)
-	fmt.Fprintf(w, "Distance: %s", workout.Distance)
-	fmt.Fprintf(w, "Elevation Gain: %s", workout.TotalElevationGain)
-	fmt.Fprintf(w, "Duration: %s", workout.Duration)
-
-	fmt.Println("Updating workout description..")
-
-	prompt := buildPrompt(workout)
+	prompt := buildPrompt(workouts)
 	fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
 	summary, err := generateSummary(prompt)
 	if err != nil {
@@ -125,7 +119,7 @@ func updateActivityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("Summary from chatgpt: %s\n", summary)
 
-	err = updateWorkout(workoutID, summary, generateActivityName(workout), accessToken)
+	err = updateWorkout(workoutID, summary, "Week Finisher ☄️", accessToken)
 	if err != nil {
 		fmt.Println("Failed to update workout description:", err)
 		return
@@ -255,15 +249,27 @@ func getTokenFromStrava(code string, refreshToken string) (AccessTokenResponse, 
 	return tokenResp, nil
 }
 
-func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
-	fmt.Printf("Fetching workout: %d with access token: %s", workoutID, accessToken)
+// GetCurrentTimeEpoch returns the current time in Unix epoch seconds
+func getCurrentTimeEpoch() int64 {
+	return time.Now().Unix()
+}
+
+// GetLastWeekTimeEpoch returns the Unix epoch seconds for the same time last week
+func getLastWeekTimeEpoch() int64 {
+	// Subtract 7 days from the current time
+	lastWeek := time.Now().AddDate(0, 0, -7)
+	return lastWeek.Unix()
+}
+
+func fetchWeekWorkouts(accessToken string) ([]Workout, error) {
+	//fmt.Printf("Fetching workout: %d with access token: %s", workoutID, accessToken)
 	// Create a new HTTP client
 	client := http.Client{}
 
 	// Create a GET request to fetch the workout details
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.strava.com/api/v3/activities/%d", workoutID), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.strava.com/api/v3/activities?before=%d&after=%d", getCurrentTimeEpoch(), getLastWeekTimeEpoch()), nil)
 	if err != nil {
-		return Workout{}, err
+		return []Workout{}, err
 	}
 
 	// Set the access token in the request header
@@ -272,31 +278,31 @@ func fetchWorkoutDetails(workoutID int, accessToken string) (Workout, error) {
 	// Send the request
 	resp, err := client.Do(req)
 	if err != nil {
-		return Workout{}, err
+		return []Workout{}, err
 	}
 	defer resp.Body.Close()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Workout{}, err
+		return []Workout{}, err
 	}
 
 	//prettyPrintJSON(string(body))
 
 	// Check the response status code
 	if resp.StatusCode != http.StatusOK {
-		return Workout{}, fmt.Errorf("request failed with status: %d, response: %s", resp.StatusCode, string(body))
+		return []Workout{}, fmt.Errorf("request failed with status: %d, response: %s", resp.StatusCode, string(body))
 	}
 
 	// Parse the response body into a Workout struct
-	var workout Workout
-	err = json.Unmarshal(body, &workout)
+	var workouts []Workout
+	err = json.Unmarshal(body, &workouts)
 	if err != nil {
-		return Workout{}, err
+		return []Workout{}, err
 	}
 
-	return workout, nil
+	return workouts, nil
 }
 
 func updateWorkout(workoutID int, newDescription string, newName string, accessToken string) error {
@@ -412,42 +418,41 @@ func generateSummary(prompt string) (string, error) {
 	return "", fmt.Errorf("No response received from ChatGPT")
 }
 
-func buildPrompt(workout Workout) string {
-	kilometers := convertMetersToKilometers(workout.Distance)
-	duration := workout.Duration
-	elevationGain := workout.TotalElevationGain
-	latitude := float64(0)
-	longitude := float64(0)
-	if len(workout.StartLocation) > 0 {
-		latitude = workout.StartLocation[0]
-		longitude = workout.StartLocation[1]
+// buildPrompt creates a prompt for generating a weekly summary of workouts
+func buildPrompt(workouts []Workout) string {
+	var sb strings.Builder
+
+	sb.WriteString("Generate a weekly running summary based on the following workouts:\n\n")
+
+	for _, w := range workouts {
+		sb.WriteString(fmt.Sprintf(
+			"- %s on %s: %.2f km, duration %s, elevation gain %.2f meters, average heart rate %.1f bpm. Location: [%.2f, %.2f].\n",
+			w.Name,
+			w.Date.Format("Monday"),
+			w.Distance/1000,
+			humanReadableDuration(w.Duration),
+			w.TotalElevationGain,
+			w.HeartRate,
+			w.StartLocation[0],
+			w.StartLocation[1],
+		))
 	}
-	// averageSpeed := workout.AverageSpeed (convert that to km pace instead of speed)
 
-	return fmt.Sprintf(`
-	Based on the following information about a %s I just did:
-	distance of around %f kms,
-	duration in seconds: %d (please mention that in a human friendly format),	
-    
-	using this elevation gain: %f (only mention the elevation gain if the workout had high one),
-	given the following latitude: %f and longitude: %f, only if they are not of value 0, mention where the %s was done city and district-wise 
-	(as if you are a local from this city)
-	
-	Please generate a summary in a story-telling exciting way rather
-	than a list. The story should be talking to me e.g. "You ..."
+	sb.WriteString("\nWrite the summary in a story-telling, exciting, and motivational way, suitable for a Strava post. Please generaete the summary. Mentioning when I was running with people. Insights on best times of days for performance." +
+		"- total weekly distance (mention that in context for what’s to come next week)\n- the summary should be written in an engaging way for the reader - not a big chunk of text.\n- some insights on based last week’s runs you are usually more performant at this time of the day based on heart rate and effort. \n" +
+		" etc\n\n")
 
-	It should be written in a format to be posted as a workout description in Strava, in my own style of writing. 
+	return sb.String()
+}
 
-	Also include a joke or some kind of unpredictable funny comments.
-		
-	Put all this information in one paragraph in a witty and concise way.`,
-		workout.SportType,
-		kilometers,
-		duration,
-		elevationGain,
-		latitude,
-		longitude,
-		workout.SportType)
+// humanReadableDuration converts duration from seconds to a human-friendly format
+func humanReadableDuration(seconds int) string {
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
+	if hours > 0 {
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	}
+	return fmt.Sprintf("%dm", minutes)
 }
 
 func openAI() {
@@ -655,28 +660,27 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if event.ObjectType == "activity" && event.AspectType == "create" {
+		if event.ObjectType == "activity" && event.AspectType == "create" && isTodayMonday() {
 			accessToken := getAccessToken()
 
-			if err != nil {
-				fmt.Printf("invalid activity id")
-			}
-			workout, err := fetchWorkoutDetails(event.ObjectId, accessToken)
-			fmt.Printf("Fetched Workout: %s", workout.Name)
-			prompt := buildPrompt(workout)
+			workouts, err := fetchWeekWorkouts(accessToken)
+			prompt := buildPrompt(workouts)
 			fmt.Printf("Sending this prompt to chatgpt: %s\n", prompt)
+
 			summary, err := generateSummary(prompt)
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
 			}
+
 			fmt.Printf("Summary from chatgpt: %s\n", summary)
 
-			err = updateWorkout(event.ObjectId, summary, generateActivityName(workout), accessToken)
+			err = updateWorkout(event.ObjectId, summary, "Week Finisher 🔥🔥", accessToken)
 			if err != nil {
 				fmt.Println("Failed to update workout description:", err)
 				return
 			}
+
 			fmt.Println("Workout description updated successfully!")
 
 		} else {
@@ -686,4 +690,13 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Sorry, only GET and POST are supported", http.StatusNotFound)
 	}
+}
+
+// isTodayMonday checks if today is Monday.
+func isTodayMonday() bool {
+	// Get the current day of the week.
+	today := time.Now().Weekday()
+
+	// Check if today is Monday.
+	return today == time.Monday
 }
