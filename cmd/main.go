@@ -426,7 +426,8 @@ func buildPrompt(workouts []Workout) string {
 	var sb strings.Builder
 	totalDistance := 0.0
 
-	sb.WriteString("You are my friendly running coach. Please generate a summary for my last week's training log" +
+	sb.WriteString("You are my friendly running coach. Please generate a summary for my last week's (only starting from Monday)" +
+		" training log" +
 		"for another week in training for the Barcelona Marathon in March:\n\n")
 
 	for _, w := range workouts {
