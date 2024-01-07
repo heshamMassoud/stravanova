@@ -691,7 +691,7 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 				weekLabel = "week"
 			}
 
-			err = updateWorkout(event.ObjectId, summary, fmt.Sprintf("T-%d %s - Road to BCN\n\n", weeksUntilMarathon, weekLabel), accessToken)
+			err = updateWorkout(event.ObjectId, summary, fmt.Sprintf("T-%d %s: Road to BCN\n\n", weeksUntilMarathon, weekLabel), accessToken)
 			if err != nil {
 				fmt.Println("Failed to update workout description:", err)
 				return
