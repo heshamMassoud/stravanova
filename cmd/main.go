@@ -445,7 +445,9 @@ func buildPrompt(workouts []Workout) string {
 	totalDistanceRounded := math.Ceil(totalDistance)
 	sb.WriteString(fmt.Sprintf("\nInclude some friendly tips about last week, and what to "+
 		"watch out for next week. Total mileage in km last week: %d\n You can use emojis if it make sense."+
-		"Make the summary feel as human as possible. Also it should be consise and not a lot of empty words.", int(totalDistanceRounded)))
+		"Make the summary feel as human as possible."+
+		" Also it should be consise and not a lot of empty words."+
+		"Don't use markdown format, since it will not work when displayed.", int(totalDistanceRounded)))
 
 	return sb.String()
 }
@@ -683,8 +685,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 			currentDate := time.Now()                                             // get current date
 			marathonDate := time.Date(2024, time.March, 10, 0, 0, 0, 0, time.UTC) // set the marathon date
 			weeksUntilMarathon := int(math.Ceil(marathonDate.Sub(currentDate).Hours() / 24 / 7))
+			weekLabel := "weeks"
+			if weeksUntilMarathon == 1 {
+				weekLabel = "week"
+			}
 
-			err = updateWorkout(event.ObjectId, summary, fmt.Sprintf("Training Week %d - Road to BCN\n\n", weeksUntilMarathon), accessToken)
+			err = updateWorkout(event.ObjectId, summary, fmt.Sprintf("T-%d %s - Road to BCN\n\n", weeksUntilMarathon, weekLabel), accessToken)
 			if err != nil {
 				fmt.Println("Failed to update workout description:", err)
 				return
