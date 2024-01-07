@@ -34,6 +34,7 @@ type AccessTokenResponse struct {
 type Workout struct {
 	ID                 int       `json:"id"`
 	Name               string    `json:"name"`
+	Description        string    `json:"description"`
 	SportType          string    `json:"sport_type"`
 	Distance           float64   `json:"distance"`
 	TotalElevationGain float64   `json:"total_elevation_gain"`
@@ -421,33 +422,30 @@ func generateSummary(prompt string) (string, error) {
 	return "", fmt.Errorf("No response received from ChatGPT")
 }
 
-// buildPrompt creates a prompt for generating a weekly summary of workouts
 func buildPrompt(workouts []Workout) string {
 	var sb strings.Builder
+	totalDistance := 0.0
 
-	sb.WriteString("Generate a weekly running summary based on the following workouts:\n\n")
+	sb.WriteString("You are my friendly running coach. Please generate a summary for my last week's training log" +
+		"for another week in training for the Barcelona Marathon in March:\n\n")
 
 	for _, w := range workouts {
+		distanceInKm := w.Distance / 1000
+		totalDistance += distanceInKm
+
 		sb.WriteString(fmt.Sprintf(
-			"- %s on %s: %.2f km, duration %s, elevation gain %.2f meters, average heart rate %.1f bpm. \n",
+			"- %s (%s): %.2f km in %s. %s\n",
 			w.Name,
 			w.Date.Format("Monday"),
 			w.Distance/1000,
 			humanReadableDuration(w.Duration),
-			w.TotalElevationGain,
-			w.HeartRate,
+			w.Description,
 		))
 	}
-
-	sb.WriteString("\nWrite the summary in a story-telling, exciting, and motivational way, humble way suitable for " +
-		"a Strava post (no need for hashtags). Don't make it cheesy." +
-		" The summary should consider when I was running with people or solo. " +
-		"Insights on best times of days for performance." +
-		"- total weekly distance (mention that in context for what’s to come next week)\n- the summary should be" +
-		" written in an engaging way for the reader - not a big chunk of text.\n" +
-		"- some insights on based last week’s runs you are usually more performant at this time of" +
-		" the day based on the average heart rate and effort. \n" +
-		" Also the summary, should consider the grand scheme of things which is training for the berlin marathon in September 2024\n\n")
+	totalDistanceRounded := math.Ceil(totalDistance)
+	sb.WriteString(fmt.Sprintf("\nInclude some friendly tips about last week, and what to "+
+		"watch out for next week. Total mileage in km last week: %d\n You can use emojis if it make sense."+
+		"Make the summary feel as human as possible. Also it should be consise and not a lot of empty words.", int(totalDistanceRounded)))
 
 	return sb.String()
 }
@@ -682,7 +680,11 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 
 			fmt.Printf("Summary from chatgpt: %s\n", summary)
 
-			err = updateWorkout(event.ObjectId, summary, "Week Finisher 🔥🔥", accessToken)
+			currentDate := time.Now()                                             // get current date
+			marathonDate := time.Date(2024, time.March, 10, 0, 0, 0, 0, time.UTC) // set the marathon date
+			weeksUntilMarathon := int(math.Ceil(marathonDate.Sub(currentDate).Hours() / 24 / 7))
+
+			err = updateWorkout(event.ObjectId, summary, fmt.Sprintf("Training Week %d - Road to BCN\n\n", weeksUntilMarathon), accessToken)
 			if err != nil {
 				fmt.Println("Failed to update workout description:", err)
 				return
